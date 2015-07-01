@@ -22,7 +22,7 @@ clean :
 
 test :
 	./stories tests/dphos.ka
-	@#pdflatex test.tex
+	@#pdflatex tex/main.tex
 	@#xdg-open *.pdf
 
 showdoc : 
