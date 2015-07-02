@@ -60,7 +60,7 @@ let def_params pos_constrs = {
 }
 
 
-let pos_constrs = [ ("A", [("x", 0.) ; ("y", 90.)]) ]
+let pos_constrs = [ ("A", [("x", 0.) ; ("y", 0.)]) ]
 
 let my_params = def_params pos_constrs
 
@@ -332,7 +332,7 @@ let render filename pos_constrs mixture params =
 	
 	Metapost.emit filename cmd ;
 	Metapost.dump 
-           ~prelude:(Metapost.read_prelude_from_tex_file "test.tex") 
+           (*~prelude:(Metapost.read_prelude_from_tex_file "main.tex")*)
            ~pdf:true filename
 	
 

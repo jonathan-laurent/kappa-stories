@@ -28,12 +28,12 @@ let main () =
 		printf "%a -> %a\n" printer r.lhs printer r.rhs ;
 		printf "\n\n" ;
 		let compiled = Rule.compile (model.signature) r in
-		Rule.print Format.std_formatter model.signature compiled in
+		Rule.print Format.std_formatter model.signature compiled ;
 		
-		(* let lhs, rhs = SimpleAst.dump r.lhs,  SimpleAst.dump r.rhs in
+		let lhs, rhs = SimpleAst.dump r.lhs,  SimpleAst.dump r.rhs in
 		let open TexRendering in
 		let renderF = make_rendering [lhs ; rhs] my_params in
-		render "test" renderF lhs my_params in *)
+		render "test" renderF rhs my_params in
 		
 	List.iter print_rule (model.rules @ List.map (fun t -> t.init_rule) model.init)
 	

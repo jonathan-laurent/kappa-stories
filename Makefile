@@ -19,11 +19,12 @@ clean :
 
 	-rm -rf storyBooks.docdir
 	-rm -f  stories
+	-rm -f *.log *.aux *.mps *.pdf
 
 test :
-	./stories tests/dphos.ka
-	@#pdflatex tex/main.tex
-	@#xdg-open *.pdf
+	./stories tests/simpl.ka || true
+	pdflatex main.tex
+	xdg-open *.pdf
 
 showdoc : 
 	firefox ./storyBooks.docdir/index.html
