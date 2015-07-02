@@ -74,7 +74,7 @@ let def_params pos_policy = {
 }
 
 
-let my_pos_policy = [ ("A", [("x", 0.) ; ("y", 0.)]) ]
+let my_pos_policy = [ ("A", [("x", 0.) ; ("y", 90.)]) ]
 
 let my_params = def_params my_pos_policy
 
@@ -297,7 +297,7 @@ let compute_pos_constrs mixtures params =
 			let wanted_angl = anch_angl +. 180. in
 			let delta_angl = wanted_angl -. cur_angl in
 			
-			(* printf "[%d] anchored to [%d] by site [%s] \n" ag_id dest_id dest_s ; *)
+			printf "[%d] anchored to [%d] by site [%s] \n" ag_id dest_id dest_s ;
 				
 			Hashtbl.add t ag_id (pos, rotate delta_angl ag_pos_constrs)
 		
