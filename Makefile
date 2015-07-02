@@ -11,7 +11,6 @@ build :
 	cp ../main.native stories
 	cp -r ../storyBooks.docdir .
 
-
 clean :
 	-rm -rf ../_build
 	-rm -f  ../main.native stories
@@ -26,6 +25,7 @@ test :
 	pdflatex main.tex
 	xdg-open *.pdf
 
-showdoc : 
+
+showdoc :
 	firefox ./storyBooks.docdir/index.html
 	

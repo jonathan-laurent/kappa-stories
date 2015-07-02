@@ -6,15 +6,23 @@ open Lens
 
 type sgraph = agent int_map
 
+and agent_id = int
+
+and agent_ty = string
+
+and site_name = string
+
+and int_state = string
+
 and agent = {
-	ty    : string ;
+	ty    : agent_ty ;
 	sites : site list ;		
 }
 
 and site = {
-	name : string ;
-	int_state : string option ;
-	lnk_state : link
+	name : site_name ;
+	int_state : int_state option ;
+	lnk_state : link			  
 }
 
 and link =
@@ -24,10 +32,10 @@ and link =
   | Lnk_some
   | Lnk_type of port_ty
 
-and port_ty = string (* type of agent *)
-  		    * string (* port *)
+and port_ty = agent_ty * site_name
 
-and port = int * string
+and port_id = agent_id * site_name
+
 
 
 (* This is used to generate link numbers. When a link is encountered

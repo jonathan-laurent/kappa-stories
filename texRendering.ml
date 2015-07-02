@@ -9,35 +9,49 @@ open Command
 open Color
 
 
-type pos_constrs = (string * ag_pos_constrs) list
+(** Angles are expressed in _degrees_. *)
+type angle = float
 
-and ag_pos_constrs = 
-    site_pos_constrs list   (* Positions of the sites *)
-			  
-and site_pos_constrs = 
-	string                  (* Name of the site *)
-  * float                   (* Angle in degrees *)
+(** User positioning policy :
+    Association list giving the site positioning policy of each agent type *)
+type user_pos_policy = (agent_ty * ag_sites_angles) list
+
+(** Association list giving the angular position of each site on an agent *)
+and ag_sites_angles = (site_name * angle) list
+
+(** Positioning constraints for an agent *)
+type ag_pos_constrs = ag_pos * ag_sites_angles
+and  ag_pos = Point.t (** Position of the center of an agent *)
+
+(** A closure mapping an agent id to its positionning constraints *)
+type pos_constrs = agent_id -> ag_pos_constrs
 	
 	
-and ag_params = {
-	ag_label : string ;
-	ag_color : Color.t ;
-	ag_diam  : Num.t
+	
+(** Drawing parameters *)
+	
+type ag_params = {
+	 ag_label : string  ;
+	 ag_color : Color.t ;
+	 ag_diam  : Num.t   ; (** Diameter *)
 }	
 			  
 and site_params = {
-	s_label : string ;
-	s_color : Color.t
+	s_label : string  ;
+	s_color : Color.t ;
 }
 
 and params = {
-	ag_dist     : Num.t ;
+	ag_dist     : Num.t ;  (** Distance between the center of two neighbors *)
 	site_diam   : Num.t ;
-	dev_angle   : float ;
-	pos_constrs : pos_constrs ;
-	ag_params   : int -> string -> ag_params ;
-	site_params : int -> string -> string -> site_params
+	dev_angle   : angle ;  (** Deviation angle. See below. *)
+	pos_policy  : user_pos_policy ;
+	ag_params   : agent_id -> agent_ty -> ag_params ;
+	site_params : agent_id -> agent_ty -> site_name -> site_params
 }
+(** The deviation angle is used so two agents that can be connected to an other one
+    via the same site are not displayed in the same position. *)
+
 
 let def_ag_params id name = {
 	ag_label = name ;
@@ -50,37 +64,38 @@ let def_site_params ag_id ag_type site_name = {
 	s_color = Color.white
 }
 
-let def_params pos_constrs = {
+let def_params pos_policy = {
 	ag_dist = cm 1.7 ;
 	site_diam = cm 0.3 ;
 	dev_angle = 30. ;
-	pos_constrs = pos_constrs ;
+	pos_policy = pos_policy ;
 	ag_params = def_ag_params ;
 	site_params = def_site_params
 }
 
 
-let pos_constrs = [ ("A", [("x", 0.) ; ("y", 0.)]) ]
+let my_pos_policy = [ ("A", [("x", 0.) ; ("y", 0.)]) ]
 
-let my_params = def_params pos_constrs
+let my_params = def_params my_pos_policy
 
 
-(* Maps an id to the type of the agent *)
 
-let agent_types_map mixtures = 
+
+
+
+
+
+
+let agent_types_map (mixtures : sgraph list) : agent_ty int_map = 
 	mixtures |> List.fold_left (fun mixt acc ->
 		mixt |> Imap.fold (fun ag_id ag acc ->
 			Imap.add ag_id ag.ty acc
 			) acc
 		) Imap.empty
 		
-		
-
-
 
 (* Returns the set of all agent types encountered in a list of mixtures *)
-
-let agent_types_set mixtures = 
+let agent_types_set (mixtures : sgraph list) : SSet.t = 
 	mixtures 
 	|> agent_types_map |> Imap.to_list 
 	|> List.map snd |> sset_of_list
@@ -100,6 +115,8 @@ let iter_mixtures f mixtures =
 	)
 	
 
+(* Function to add a (key, value) pair to an hash table only if its is not in it *)
+
 let hashtbl_set_add t k v = 
 	try if not (List.mem v (Hashtbl.find_all t k)) then raise Not_found
 	with Not_found -> Hashtbl.add t k v
@@ -109,7 +126,7 @@ let hashtbl_set_add t k v =
 	Returns a function which maps an agent type to the list of the sites 
 	belonging to this agent *)
 
-let make_sites_list mixtures = 
+let make_sites_list (mixtures : sgraph list) : (agent_ty -> site_name list) = 
 
 	let t = Hashtbl.create 100 in
 	mixtures |> iter_mixtures (fun _ ag s ->
@@ -118,37 +135,37 @@ let make_sites_list mixtures =
 	) ;
 	fun ty -> Hashtbl.find_all t ty
 	
-	
-	
-	
 
+(* Gives the type of a port in a mixture *)
 
-let port_ty_of_port (ag_id, s) mixture = 
-	let ag_ty = (Smap.find ag_id mixture).ty in
+let ty_of_port ((ag_id, s) : port_id) (mixture : sgraph) : port_ty = 
+	let ag_ty = (Imap.find ag_id mixture).ty in
 	(ag_ty, s)
 	
 
+let cut_angle i n = (float_of_int i) *. (360. /. float_of_int n)
+	
 
 
-(* port_id -> (port_id list) *)
+(* Makes a closure which maps a port to the list of its neighbours 
+   (relative to a set of mixtures) *)
 
-let make_neigh_map mixtures = 
+let make_neigh_map (mixtures : sgraph list) : (port_id -> port_id list) = 
 	
 	let t = Hashtbl.create 100 in
 	
 	mixtures |> List.iter (fun mixt -> 
 		let ag_neigh = SimpleAst.compile_links mixt in
 		mixt |> iter_mixture (fun ag_id ag s ->
-			printf "%%" ;
 			ag_neigh (ag_id, s.name) |> Option.map_default () (fun dest ->
 				hashtbl_set_add t (ag_id, s.name) dest
 			)	
 		)	
 	) ;
 	
-	printf "##\n" ;
+	(*printf "##\n" ;
 	Hashtbl.iter (fun (id, s) (id', s') -> printf "(%d, %s) to (%d, %s)" id s id' s' ) t ;
-	printf "##\n" ;
+	printf "##\n" ; *)
 	
 	fun port -> Hashtbl.find_all t port
 
@@ -156,16 +173,17 @@ let make_neigh_map mixtures =
 
 
 
-let cut_angle i n = (float_of_int i) *. (360. /. float_of_int n)
 
 
 
 
-(* Creates a function which maps an agent type to a [site_pos_constrs] value *)
 
-let make_ag_pos_constrs mixtures params = 
+(* Returns a closure mapping an agent type to its sites angles.
+	This is done by completing the user specified policy ([params.pos_policy]) *)
 
-	let (map :  (site_pos_constrs list) string_map) = Smap.of_list (params.pos_constrs) in
+let sites_angles_policy mixtures params : (agent_ty -> ag_sites_angles) = 
+
+	let map = Smap.of_list (params.pos_policy) in
 	
 	let sites_list = make_sites_list mixtures in
 	
@@ -192,17 +210,17 @@ let make_ag_pos_constrs mixtures params =
 	fun ag_ty -> Smap.find ag_ty map
 		
 	
-let rotate (al : float) (apc : ag_pos_constrs) = 
-	List.map (fun (s, a) -> (s, a +. al) ) apc
+let rotate (al : float) (asas : ag_sites_angles) = 
+	List.map (fun (s, a) -> (s, a +. al) ) asas
 
 	
 
 	
 	
 
-exception Found_anchor of string * port
+exception Found_anchor of string * port_id
 
-let make_rendering mixtures params = 
+let compute_pos_constrs mixtures params = 
 
 	(* Agents are sorted by 
 		1. Order of appearance of their type in the [pos_constrs] structure
@@ -212,17 +230,17 @@ let make_rendering mixtures params =
 	
 	let neigh            =  make_neigh_map       mixtures        in
 	let agent_types_map  =  agent_types_map      mixtures        in
-	let ag_pos_constrs   =  make_ag_pos_constrs  mixtures params in
+	let ag_pos_constrs   =  sites_angles_policy  mixtures params in
 	let sites_list       =  make_sites_list      mixtures        in
 	
 	let ty_of_id ag_id   = Imap.find ag_id agent_types_map       in
 	
 	let ag_priority = 
 		let map = 
-			params.pos_constrs 
+			params.pos_policy 
 			|> List.mapi (fun i (ag_ty,_) -> (ag_ty, i))
 			|> Smap.of_list in
-		let default_order = List.length params.pos_constrs in
+		let default_order = List.length params.pos_policy in
 		fun ag_ty -> try Smap.find ag_ty map with Not_found -> default_order in
 		
 	let ag_weight ag_id = 
@@ -258,7 +276,6 @@ let make_rendering mixtures params =
 			sites_list ag_ty |> List.iter (fun s ->
 			
 				neigh (ag_id, s) |> List.iter (fun (dest_id, dest_s) ->
-					printf "neigh  %d \n" dest_id ;
 					if Hashtbl.mem t dest_id then 
 						raise (Found_anchor (s, (dest_id, dest_s)))
 				)
@@ -266,7 +283,6 @@ let make_rendering mixtures params =
 			
 			(* No anchor is found : put to the origin *)
 			Hashtbl.add t ag_id (Point.origin, ag_pos_constrs) ;
-			printf "!"
 			
 			
 		with Found_anchor (from_s, (dest_id, dest_s)) -> begin
@@ -281,7 +297,7 @@ let make_rendering mixtures params =
 			let wanted_angl = anch_angl +. 180. in
 			let delta_angl = wanted_angl -. cur_angl in
 			
-			printf "[%d] anchored to [%d] by site [%s] \n" ag_id dest_id dest_s ;
+			(* printf "[%d] anchored to [%d] by site [%s] \n" ag_id dest_id dest_s ; *)
 				
 			Hashtbl.add t ag_id (pos, rotate delta_angl ag_pos_constrs)
 		
@@ -298,7 +314,7 @@ let make_rendering mixtures params =
 
 
 
-let render filename pos_constrs mixture params = 
+let render ~filename pos_constrs mixture params = 
 
 	let port_to_label (i, p) = sprintf "%d_%s" i p in
 
