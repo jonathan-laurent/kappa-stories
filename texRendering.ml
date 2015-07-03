@@ -21,11 +21,11 @@ and ag_sites_angles = (site_name * angle) list
 
 (** Positioning constraints for an agent *)
 type ag_pos_constrs = ag_pos * ag_sites_angles
-and  ag_pos = Point.t (** Position of the center of an agent *)
+and  ag_pos = Point.t (** Position of the center of an agent *) (* Relativement à la composante connexe *)
 
 (** A closure mapping an agent id to its positionning constraints *)
 type pos_constrs = agent_id -> ag_pos_constrs
-	
+(* TODO: Couple/Record : Positionnement relatif à la composante connexe + Liste composantes connexes *)
 	
 	
 (** Drawing parameters *)
@@ -74,7 +74,7 @@ let def_params pos_policy = {
 }
 
 
-let my_pos_policy = [ ("A", [("x", 0.) ; ("y", 90.)]) ]
+let my_pos_policy = [ (*("A", [("x", 0.) ; ("y", 90.)]) *)]
 
 let my_params = def_params my_pos_policy
 
@@ -254,11 +254,10 @@ let compute_pos_constrs mixtures params =
 		
 	let cmp = 
 		Util.make_lex_compare compare 
-			(Util.make_lex_compare compare compare) in
+			(Util.make_lex_compare (Util.make_rev_order compare) compare) in
 		
 	(* Order in which agents are processed *)
 	let ags = ags |> List.sort cmp  |> List.map (fun (_, (_, id)) -> id) in
-	
 	
 	
 	(*  Point.t * site_pos_constrs  *)
@@ -296,6 +295,10 @@ let compute_pos_constrs mixtures params =
 			let cur_angl = List.assoc from_s ag_pos_constrs in
 			let wanted_angl = anch_angl +. 180. in
 			let delta_angl = wanted_angl -. cur_angl in
+
+			printf "Prefered order :\n";
+			ags |> List.iter (fun id -> printf "%s" (Imap.find id  agent_types_map));
+			printf "\n";
 			
 			printf "[%d] anchored to [%d] by site [%s] \n" ag_id dest_id dest_s ;
 				
@@ -324,7 +327,7 @@ let render ~filename pos_constrs mixture params =
 		let orig = (Point.scale (multf 0.5 ag_diam) (dir site_angle)) in
 		let path = Path.shift orig (Shapes.circle params.site_diam) in
 		let cmd = seq [Path.fill ~color:white path ; Path.draw path] in
-		Box.pic ~name:(port_to_label (ag_id, s_name)) cmd in
+		Box.pic ~dx:(bp 0.) ~dy:(bp 0.) ~name:(port_to_label (ag_id, s_name)) cmd in
 		
 	
 	let agent_box (ag_id, ag) = 
@@ -342,17 +345,32 @@ let render ~filename pos_constrs mixture params =
 		
 		Box.shift ag_pos (Box.group ([agent_body] @ sites)) in
 		
-		
 	let ags = Box.group (mixture |> Imap.to_list |> List.map agent_box) in
-	let cmd = Box.draw ags in
+
+	let find_neighbor = compile_links mixture in
+	let links_agent_cmd (ag_id, ag) =
+		
+		let links_site (ag_id, site_name) = match find_neighbor (ag_id, site_name) with
+			| None -> seq []
+			| Some (ag_id', site_name') ->
+				let b = Box.get (port_to_label (ag_id, site_name)) ags
+				and b' = Box.get (port_to_label (ag_id', site_name')) ags in
+				let pt = Box.ctr b and pt' = Box.ctr b' in
+				let pa = Path.pathp [pt;pt'] in
+				let pa = Path.cut_before (Box.bpath b) pa in
+				let pa = Path.cut_after (Box.bpath b') pa in
+				draw pa in
+			
+
+		seq (ag.sites |> List.map (fun s -> (ag_id, s.name) ) |> List.map links_site) in
+
+	let lnks = seq (mixture |> Imap.to_list |> List.map links_agent_cmd) in
+	let cmd = seq [Box.draw ags;lnks] in
 	
 	Metapost.emit filename cmd ;
 	Metapost.dump 
            (*~prelude:(Metapost.read_prelude_from_tex_file "main.tex")*)
            ~pdf:true filename
-	
-
-
 
 
 

@@ -51,8 +51,9 @@ end
 let make_lex_compare cmp1 cmp2 (x, y) (x', y') =
 	let r = cmp1 x x' in
 	if r = 0 then cmp2 y y'
-	else if r > 0 then 1
-	else -1
+	else r
+
+let make_rev_order cmp x y = - (cmp x y)
 
 
 (** Some dictionnaries *)
