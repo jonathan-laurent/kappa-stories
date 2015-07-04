@@ -121,11 +121,14 @@ let iset_of_list = List.fold_left (fun acc x -> ISet.add x acc) ISet.empty
 
 let list_of_queue q = List.rev (Queue.fold (fun acc x -> x :: acc) [] q)
 
+(** Functions on Stacks *)
+
+let rec list_of_stack s = match (Stack.copy s) with
+	| s when (Stack.length s) = 0 -> []
+	| s -> let e = Stack.pop s in e::(list_of_stack s)
 
 
-(** Unordered pairs 
-  
- *)
+(** Unordered pairs *)
 
 module UnorderedPair(Ord : Map.OrderedType) = struct
 

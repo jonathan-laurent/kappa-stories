@@ -17,10 +17,13 @@ and ag_sites_angles = (site_name * angle) list
 
 (** Positioning constraints for an agent *)
 type ag_pos_constrs = ag_pos * ag_sites_angles
-and  ag_pos = Point.t (** Position of the center of an agent *)
+and  ag_pos = Point.t (** Position of the center of an agent (relative to complex) *)
 
 (** A closure mapping an agent id to its positionning constraints *)
-type pos_constrs = agent_id -> ag_pos_constrs
+type pos_constrs = {
+	ag_pos_constrs : agent_id -> ag_pos_constrs ; (** Positioning constraints for an agent *)
+	complexes_list : int list list; (** List of connected components *)
+}
 	
 	
 (** Drawing parameters *)

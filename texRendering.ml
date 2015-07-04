@@ -21,11 +21,13 @@ and ag_sites_angles = (site_name * angle) list
 
 (** Positioning constraints for an agent *)
 type ag_pos_constrs = ag_pos * ag_sites_angles
-and  ag_pos = Point.t (** Position of the center of an agent *) (* Relativement à la composante connexe *)
+and  ag_pos = Point.t (** Position of the center of an agent (relative to complex) *)
 
 (** A closure mapping an agent id to its positionning constraints *)
-type pos_constrs = agent_id -> ag_pos_constrs
-(* TODO: Couple/Record : Positionnement relatif à la composante connexe + Liste composantes connexes *)
+type pos_constrs = {
+	ag_pos_constrs : agent_id -> ag_pos_constrs ; (** Positioning constraints for an agent *)
+	complexes_list : int list list; (** List of connected components *)
+}
 	
 	
 (** Drawing parameters *)
@@ -261,15 +263,15 @@ let compute_pos_constrs mixtures params =
 	
 	
 	(*  Point.t * site_pos_constrs  *)
-	let t = Hashtbl.create 100 in
+	let t = Hashtbl.create 100
+	and complexes = Stack.create () in
 	
 	let process ag_id = 
 	
 		let ag_ty = ty_of_id ag_id in
 		let ag_pos_constrs = ag_pos_constrs ag_ty in
 	
-		(* Searching for an anchor : a agent linked to it and which is 
-		   not positioned yet *)
+		(* Searching for an anchor : an agent linked to it and which is positioned *)
 		   
 		try
 			sites_list ag_ty |> List.iter (fun s ->
@@ -281,7 +283,9 @@ let compute_pos_constrs mixtures params =
 			) ;
 			
 			(* No anchor is found : put to the origin *)
-			Hashtbl.add t ag_id (Point.origin, ag_pos_constrs) ;
+			(*Hashtbl.add t ag_id (Point.origin, ag_pos_constrs) ;*)
+			(* No anchor is found : process later *)
+			[ag_id]
 			
 			
 		with Found_anchor (from_s, (dest_id, dest_s)) -> begin
@@ -295,20 +299,29 @@ let compute_pos_constrs mixtures params =
 			let cur_angl = List.assoc from_s ag_pos_constrs in
 			let wanted_angl = anch_angl +. 180. in
 			let delta_angl = wanted_angl -. cur_angl in
-
-			printf "Prefered order :\n";
-			ags |> List.iter (fun id -> printf "%s" (Imap.find id  agent_types_map));
-			printf "\n";
 			
 			printf "[%d] anchored to [%d] by site [%s] \n" ag_id dest_id dest_s ;
 				
-			Hashtbl.add t ag_id (pos, rotate delta_angl ag_pos_constrs)
+			Hashtbl.add t ag_id (pos, rotate delta_angl ag_pos_constrs);
+			Queue.add ag_id (Stack.top complexes);
+
+			[]
 		
 		end in
 	
-	
-	List.iter process ags ;
-	fun ag_id -> Hashtbl.find t ag_id
+	let process_on ags = List.fold_left (fun acc x -> acc@(process x)) [] ags in
+	let rec process_all ags prev_ags = match ags with
+		| [] -> ()
+		| a::ags when (List.length (a::ags)) = (List.length prev_ags) ->
+			Hashtbl.add t a (Point.origin, ag_pos_constrs (ty_of_id a)) ;
+			let q = Queue.create () in Queue.add a q;
+			Stack.push q complexes ;
+			process_all ags (a::ags)
+		| ags -> process_all (process_on ags) ags in 
+	process_all ags ags;
+	let complexes = List.rev (list_of_stack complexes) in
+	let complexes = List.map (fun e -> list_of_queue e) complexes in
+	{ ag_pos_constrs = (fun ag_id -> Hashtbl.find t ag_id) ; complexes_list = complexes }
 		   
 		 
 	
@@ -320,8 +333,7 @@ let compute_pos_constrs mixtures params =
 let render ~filename pos_constrs mixture params = 
 
 	let port_to_label (i, p) = sprintf "%d_%s" i p in
-
-	
+ 
 	let site_box (ag_id, ag_ty, ag_diam, s_name, site_angle) = 
 		let s_params = params.site_params ag_id ag_ty s_name in
 		let orig = (Point.scale (multf 0.5 ag_diam) (dir site_angle)) in
@@ -331,8 +343,8 @@ let render ~filename pos_constrs mixture params =
 		
 	
 	let agent_box (ag_id, ag) = 
-	
-		let (ag_pos, sites_angles) = pos_constrs ag_id in
+		printf "Agent [%d] : [%s] \n" ag_id ag.ty ;
+		let (ag_pos, sites_angles) = (pos_constrs.ag_pos_constrs) ag_id in
 		let ag_params = params.ag_params ag_id ag.ty in
 	
 		(* For each  site : (name, angle) *)
@@ -344,8 +356,12 @@ let render ~filename pos_constrs mixture params =
 		let agent_body = Box.path (Shapes.circle ag_params.ag_diam) in
 		
 		Box.shift ag_pos (Box.group ([agent_body] @ sites)) in
-		
-	let ags = Box.group (mixture |> Imap.to_list |> List.map agent_box) in
+
+	let ags_complex complex = printf "Complex length : [%d] \n" (List.length complex) ; Box.group (complex |> List.map (fun e -> agent_box (e, Imap.find e mixture))) in
+	
+	let ags_complexes = printf "Complexes length : [%d] \n" (List.length (pos_constrs.complexes_list)) ; (pos_constrs.complexes_list) |> List.map ags_complex in
+
+	let ags = List.fold_left (fun acc e -> Box.hbox ~padding:(bp 10.) [acc;e]) (Box.empty ()) ags_complexes in
 
 	let find_neighbor = compile_links mixture in
 	let links_agent_cmd (ag_id, ag) =
@@ -357,15 +373,15 @@ let render ~filename pos_constrs mixture params =
 				and b' = Box.get (port_to_label (ag_id', site_name')) ags in
 				let pt = Box.ctr b and pt' = Box.ctr b' in
 				let pa = Path.pathp [pt;pt'] in
-				let pa = Path.cut_before (Box.bpath b) pa in
-				let pa = Path.cut_after (Box.bpath b') pa in
+				(*let pa = Path.cut_before (Box.bpath b) pa in
+				let pa = Path.cut_after (Box.bpath b') pa in*)
 				draw pa in
 			
 
 		seq (ag.sites |> List.map (fun s -> (ag_id, s.name) ) |> List.map links_site) in
 
 	let lnks = seq (mixture |> Imap.to_list |> List.map links_agent_cmd) in
-	let cmd = seq [Box.draw ags;lnks] in
+	let cmd = seq [lnks;Box.draw ags] in
 	
 	Metapost.emit filename cmd ;
 	Metapost.dump 
