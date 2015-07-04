@@ -69,7 +69,7 @@ let def_site_params ag_id ag_type site_name = {
 let def_params pos_policy = {
 	ag_dist = cm 1.7 ;
 	site_diam = cm 0.3 ;
-	dev_angle = 30. ;
+	dev_angle = 60. ;
 	pos_policy = pos_policy ;
 	ag_params = def_ag_params ;
 	site_params = def_site_params
@@ -282,16 +282,26 @@ let compute_pos_constrs mixtures params =
 				)
 			) ;
 			
-			(* No anchor is found : put to the origin *)
-			(*Hashtbl.add t ag_id (Point.origin, ag_pos_constrs) ;*)
 			(* No anchor is found : process later *)
 			[ag_id]
 			
-			
 		with Found_anchor (from_s, (dest_id, dest_s)) -> begin
 		
+			let dest_neigh = neigh (dest_id, dest_s) in
+			let rec found_index item lst = match lst with
+				| [] -> failwith "Deviation : Link N° not found !"
+				| e::lst when e = item -> 0
+				| e::lst -> 1 + (found_index item lst) in
+			let link_index = found_index (ag_id, from_s) dest_neigh
+			and links_length = List.length dest_neigh in
+
 			let (anch_pos, anch_sites_angl) = Hashtbl.find t dest_id in
 			let anch_angl = List.assoc dest_s anch_sites_angl in
+
+			(* Deviation angle : params.dev_angle *)
+			let anch_angl = match links_length with
+				| 1 -> anch_angl
+				| n -> anch_angl -. (params.dev_angle /. 2.) +. ((float_of_int link_index) /. (float_of_int (n-1)) *. params.dev_angle) in
 			
 			let pos = Point.add anch_pos 
 				(Point.dir anch_angl |> Point.scale (params.ag_dist)) in
@@ -300,7 +310,7 @@ let compute_pos_constrs mixtures params =
 			let wanted_angl = anch_angl +. 180. in
 			let delta_angl = wanted_angl -. cur_angl in
 			
-			printf "[%d] anchored to [%d] by site [%s] \n" ag_id dest_id dest_s ;
+			printf "[%d] anchored to [%d] by sites [%s]-[%s] \n" ag_id dest_id from_s dest_s ;
 				
 			Hashtbl.add t ag_id (pos, rotate delta_angl ag_pos_constrs);
 			Queue.add ag_id (Stack.top complexes);
