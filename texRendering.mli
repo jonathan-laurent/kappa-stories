@@ -31,17 +31,17 @@ type pos_constrs = {
 type ag_params = {
 	 ag_label : string  ;
 	 ag_color : Color.t ;
-	 ag_diam  : Num.t   ; (** Diameter *)
+	 ag_diam  : Num.t    (** Diameter *)
 }	
 			  
 and site_params = {
 	s_label : string  ;
 	s_color : Color.t ;
+	s_diam  : Num.t
 }
 
 and params = {
 	ag_dist     : Num.t ;  (** Distance between the center of two neighbors *)
-	site_diam   : Num.t ;
 	dev_angle   : angle ;  (** Deviation angle. See below. *)
 	pos_policy  : user_pos_policy ;
 	ag_params   : agent_id -> agent_ty -> ag_params ;

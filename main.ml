@@ -4,6 +4,7 @@ open Util
 open Parser
 open SiteGraph
 open SimplePrinter
+open Mlpost
 
 let usage_msg = "A program to generate storybooks from Kappa files"
 
@@ -35,7 +36,8 @@ let main () =
 		let renderF = compute_pos_constrs [lhs ; rhs] my_params in
 		render ~filename:("test") renderF rhs my_params in
 		
-	List.iter print_rule (model.rules) (* @ List.map (fun t -> t.init_rule) model.init) *)
+	List.iter print_rule (model.rules); (* @ List.map (fun t -> t.init_rule) model.init) *)
+	Metapost.dump ~pdf:true "tmp"
 	
 	
 let _ = main ()

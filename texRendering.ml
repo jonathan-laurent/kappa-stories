@@ -35,17 +35,17 @@ type pos_constrs = {
 type ag_params = {
 	 ag_label : string  ;
 	 ag_color : Color.t ;
-	 ag_diam  : Num.t   ; (** Diameter *)
+	 ag_diam  : Num.t    (** Diameter *)
 }	
 			  
 and site_params = {
 	s_label : string  ;
 	s_color : Color.t ;
+	s_diam  : Num.t
 }
 
 and params = {
 	ag_dist     : Num.t ;  (** Distance between the center of two neighbors *)
-	site_diam   : Num.t ;
 	dev_angle   : angle ;  (** Deviation angle. See below. *)
 	pos_policy  : user_pos_policy ;
 	ag_params   : agent_id -> agent_ty -> ag_params ;
@@ -63,12 +63,12 @@ let def_ag_params id name = {
 
 let def_site_params ag_id ag_type site_name = {
 	s_label = site_name ;
-	s_color = Color.white
+	s_color = Color.white ;
+	s_diam = cm 0.3
 }
 
 let def_params pos_policy = {
 	ag_dist = cm 1.7 ;
-	site_diam = cm 0.3 ;
 	dev_angle = 60. ;
 	pos_policy = pos_policy ;
 	ag_params = def_ag_params ;
@@ -347,7 +347,7 @@ let render ~filename pos_constrs mixture params =
 	let site_box (ag_id, ag_ty, ag_diam, s_name, site_angle) = 
 		let s_params = params.site_params ag_id ag_ty s_name in
 		let orig = (Point.scale (multf 0.5 ag_diam) (dir site_angle)) in
-		let path = Path.shift orig (Shapes.circle params.site_diam) in
+		let path = Path.shift orig (Shapes.circle s_params.s_diam) in
 		let cmd = seq [Path.fill ~color:white path ; Path.draw path] in
 		Box.pic ~dx:(bp 0.) ~dy:(bp 0.) ~name:(port_to_label (ag_id, s_name)) cmd in
 		
@@ -393,10 +393,7 @@ let render ~filename pos_constrs mixture params =
 	let lnks = seq (mixture |> Imap.to_list |> List.map links_agent_cmd) in
 	let cmd = seq [lnks;Box.draw ags] in
 	
-	Metapost.emit filename cmd ;
-	Metapost.dump 
-           (*~prelude:(Metapost.read_prelude_from_tex_file "main.tex")*)
-           ~pdf:true filename
+	Metapost.emit filename cmd
 
 
 

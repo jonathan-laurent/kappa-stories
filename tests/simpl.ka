@@ -5,6 +5,6 @@
 %agent: S(d,x~u~p,y~u~p)
 
 'sw' K(d!1),K(d),S(d!1, x~p, y~u) -> K(d),K(d!1),S(d!1, x~p, y~u)  @ 5
-#'a' A(x, y), B(a), B(a) -> A(x!1, y), B(a!1), B(a)
+'a' A(x, y), B(a), B(a) -> A(x!1, y), B(a!1), B(a)
 
 %init: 1 A(), B(), B()
