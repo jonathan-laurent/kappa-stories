@@ -76,7 +76,7 @@ let def_params pos_policy = {
 }
 
 
-let my_pos_policy = [ (*("A", [("x", 0.) ; ("y", 90.)]) *)]
+let my_pos_policy = [ ("A", [("x", 0.) ; ("y", 90.)]) ]
 
 let my_params = def_params my_pos_policy
 
