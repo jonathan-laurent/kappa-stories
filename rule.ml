@@ -166,7 +166,7 @@ let compile (sign : Signature.t) (r : Model.rule) : rule =
 let print fmt sign r = 
 	let open Format in
 	let open Signature in
-	let pr = fprintf fmt in
+	let pr msg = fprintf fmt msg in
 	
 	
 	let str_of_port (id, site) = 
@@ -182,33 +182,33 @@ let print fmt sign r =
 		| Free -> "free"
 		| Bound p -> "bound" ^ (str_of_port p) in
 		
-	fprintf fmt "%d : '%s'\n" r.id r.name ;
-	fprintf fmt "Agents :" ;
+	pr "%d : '%s'\n" r.id r.name ;
+	pr "Agents :" ;
 	r.agents |> Imap.iter (fun id ty -> 
 		let ty_s = sign |> agent ty |> Agent.ty_name in
-		fprintf fmt " (%d : %s) " id ty_s
+		pr " (%d : %s) " id ty_s
 	);
-	fprintf fmt "\n" ;
-	fprintf fmt "Created :" ; 
-	r.created |> ISet.iter (fun id -> fprintf fmt " %d " id) ;
-	fprintf fmt "\n" ;
-	fprintf fmt "Deleted :" ;
-	r.deleted |> ISet.iter (fun id -> fprintf fmt " %d " id) ;
-	fprintf fmt "\n" ;
+	pr "\n" ;
+	pr "Created :" ; 
+	r.created |> ISet.iter (fun id -> pr " %d " id) ;
+	pr "\n" ;
+	pr "Deleted :" ;
+	r.deleted |> ISet.iter (fun id -> pr " %d " id) ;
+	pr "\n" ;
 	
 	let print_vars ints lnks =
 		ints |> PortMap.iter (fun p st ->
-			fprintf fmt " int%s = %s\n" (str_of_port p) (str_of_int_state p st)
+			pr " int%s = %s\n" (str_of_port p) (str_of_int_state p st)
 		) ;
 		lnks |> PortMap.iter (fun p st ->
-				fprintf fmt " lnk%s = %s\n" (str_of_port p) (str_of_lnk_state st)
+				pr " lnk%s = %s\n" (str_of_port p) (str_of_lnk_state st)
 		) in
 		
-	fprintf fmt "Tested :\n" ; 
+	pr "Tested :\n" ; 
 	print_vars r.tested_int_states r.tested_lnk_states ;
-	fprintf fmt "Modified :\n" ; 
+	pr "Modified :\n" ; 
 	print_vars r.mod_int_states r.mod_lnk_states ;
-	fprintf fmt "\n"
-	(*fprintf fmt "%d\n" (PortMap.cardinal r.mod_int_states)*)
+	pr "\n"
+	(*pr "%d\n" (PortMap.cardinal r.mod_int_states)*)
 
 

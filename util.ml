@@ -4,7 +4,6 @@
 
 (** Some operators *)
 
-
 let (|>) x f = f x
 let (|-) f g x = g (f x)
 
@@ -58,7 +57,27 @@ let make_rev_order cmp x y = - (cmp x y)
 
 (** Some dictionnaries *)
 
-module ExtMap (X : Map.OrderedType) = struct
+
+
+module type EXT_MAP_S = sig
+
+  include Map.S
+	
+  val of_list : (key * 'a) list -> 'a t
+	
+  val to_list : 'a t -> (key * 'a) list
+	
+  val of_array : (key * 'a) array -> 'a t
+	
+  val lookup_def : def:'a -> key -> 'a t -> 'a
+	
+  val mem_binding : (key * 'a) -> 'a t -> bool
+
+end
+
+module ExtMap (X : Map.OrderedType) : 
+  EXT_MAP_S with type key = X.t  =
+struct
 
 	include Map.Make (X)
 	
@@ -81,22 +100,47 @@ module ExtMap (X : Map.OrderedType) = struct
 
 end
 
+module type MAP_SET_S = sig
 
-module type EXT_MAP_S = sig
+  type t
+  type key
+  type elt
+  type elt_set
 
-	include Map.S
-	
-	val of_list : (key * 'a) list -> 'a t
-	
-	val to_list : 'a t -> (key * 'a) list
-	
-	val of_array : (key * 'a) array -> 'a t
-	
-	val lookup_def : def:'a -> key -> 'a t -> 'a
-	
-	val mem_binding : (key * 'a) -> 'a t -> bool
+  val empty : t
+  val find_all : key -> t -> elt_set
+  val remove_all : key -> t -> t
+  val mem : key -> elt -> t -> bool
+  val add : key -> elt -> t -> t
+  val remove : key -> elt -> t -> t
 
 end
+
+module MapSet (Key : Map.OrderedType) (Set : Set.S) : 
+  (MAP_SET_S 
+   with type key := Key.t with type elt := Set.elt with type elt_set := Set.t) 
+  =
+struct
+
+  module M = Map.Make(Key)
+
+  type t = Set.t M.t
+
+  let empty = M.empty
+
+  let find_all k t = 
+    try M.find k t with Not_found -> Set.empty
+
+  let remove_all k t = M.remove k t 
+
+  let mem k e t = Set.mem e (find_all k t)
+
+  let add k e t = M.add k (Set.add e (find_all k t)) t
+
+  let remove k e t = M.add k (Set.remove e (find_all k t)) t
+
+end
+
 
 module Imap  = ExtMap (Int)
 module I2map = ExtMap (Int2)
@@ -124,24 +168,24 @@ let list_of_queue q = List.rev (Queue.fold (fun acc x -> x :: acc) [] q)
 (** Functions on Stacks *)
 
 let rec list_of_stack s = match (Stack.copy s) with
-	| s when (Stack.length s) = 0 -> []
-	| s -> let e = Stack.pop s in e::(list_of_stack s)
+  | s when (Stack.length s) = 0 -> []
+  | s -> let e = Stack.pop s in e::(list_of_stack s)
 
 
 (** Unordered pairs *)
 
 module UnorderedPair(Ord : Map.OrderedType) = struct
 
-	(* The order of the ports doesn't matter.
-	   By convention, the first element is ALWAYS  *)
+  (* The order of the ports doesn't matter.  By convention, the
+	 first element is ALWAYS *)
 
-	type t = (Ord.t * Ord.t)
+  type t = (Ord.t * Ord.t)
 	
-	let make x y = if Ord.compare x y <= 0 then (x, y) else (y, x)
+  let make x y = if Ord.compare x y <= 0 then (x, y) else (y, x)
+	  
+  let to_ordered_pair p = p
 	
-	let to_ordered_pair p = p
-	
-	let compare = compare
+  let compare = compare
 
 end
 
@@ -149,12 +193,38 @@ end
 
 
 let new_counter first_id = 
-	let c = ref first_id in 
-	fun () -> 
-		begin 
-			let r = !c in
-			incr c ;
-			r
-		end
+  let c = ref first_id in 
+  fun () -> 
+	begin 
+	  let r = !c in
+	  incr c ;
+	  r
+	end
 
 
+let fold_from_iter iter = 
+  fun f acc t ->
+    let a = ref acc in
+    iter (fun e -> a := f e !a) t ;
+    !a
+
+
+let min_from_fold fold costF le = 
+
+  (* [None] is +oo *)
+  let le_opt x y = match x, y with
+    | None, None -> true
+    | None, _ | _, None -> false
+    | Some x, Some y -> le x y in
+
+  fun t ->
+    let min_opt = 
+      fold (fun e (least, least_e) ->
+        let cost_e = Some (costF e) in
+        if le_opt cost_e least then (cost_e, Some e) else (least, least_e)
+      ) (None, None) t in
+
+    match snd min_opt with
+    | None -> assert false
+    | Some x -> x
+ 

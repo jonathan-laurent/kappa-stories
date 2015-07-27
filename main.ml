@@ -4,6 +4,7 @@ open Util
 open Parser
 open SiteGraph
 open SimplePrinter
+open Generation
 
 let usage_msg = "A program to generate storybooks from Kappa files"
 
@@ -38,4 +39,5 @@ let main () =
 	List.iter print_rule (model.rules) (* @ List.map (fun t -> t.init_rule) model.init) *)
 	
 	
-let _ = main ()
+let _ = Ordsat.tests ()
+
