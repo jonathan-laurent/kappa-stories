@@ -169,18 +169,7 @@ let print fmt sign r =
 	let pr msg = fprintf fmt msg in
 	
 	
-	let str_of_port (id, site) = 
-		let ag_ty = Imap.find id r.agents in
-		let name = sign |> agent ag_ty |> Agent.site site |> Site.name in
-		sprintf "(%d, %s)" id name in
-		
-	let str_of_int_state (id, site) st = 
-		let ag_ty = Imap.find id r.agents in
-		sign |> agent ag_ty |> Agent.site site |> Site.name_of_int_state st in
-		
-	let str_of_lnk_state = function
-		| Free -> "free"
-		| Bound p -> "bound" ^ (str_of_port p) in
+	
 		
 	pr "%d : '%s'\n" r.id r.name ;
 	pr "Agents :" ;

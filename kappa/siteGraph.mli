@@ -92,6 +92,8 @@ module Agent : sig
 	
 	val add_site : site_id -> t -> t
 
+    val has_site : site_id -> t -> bool
+
 end
 
 type agent = Agent.t

@@ -165,51 +165,61 @@ let tr_rules sign ast = List.map (tr_rule sign) ast.rules
 
 let tr_observables sign ast =
 
-	let tr_vardef (name_wp, expr_wp) = 
-		match fst expr_wp with
-			| KAPPA_INSTANCE mixt ->
-				(* We want the ids of the agents to be decided automatically *)
-				let mixt = List.map (fun a -> a, None) mixt in
-				Some (fst name_wp, tr_site_graph sign mixt)
-			| _ -> None in
-	
-	Smap.of_list (Util.map_and_filter tr_vardef ast.variables)
+  let tr_vardef (name_wp, expr_wp) = 
+	match fst expr_wp with
+	| KAPPA_INSTANCE mixt ->
+	  (* We want the ids of the agents to be decided automatically *)
+	  let mixt = List.map (fun a -> a, None) mixt in
+	  Some (fst name_wp, tr_site_graph sign mixt)
+	| _ -> None in
+  
+  Smap.of_list (Util.map_and_filter tr_vardef ast.variables)
 
 
 
 let tr_init_decl name_gen sign (name_wp_opt, init_t , _) = match init_t with
-	| INIT_MIX (_, mixt) -> 
-	
-		let mixt = List.map (fun a -> a, None) mixt in
-	
-		let rule = { 
-			name = Option.map_default (name_gen ()) fst name_wp_opt ;
-			lhs  = SiteGraph.create sign ;
-			rhs  = tr_site_graph sign mixt } in
-	
-		Some { max_instances = Unlimited ; init_rule = rule }
-
-	| INIT_TOK _ -> None
+  | INIT_MIX (_, mixt) -> 
+	let mixt = List.map (fun a -> a, None) mixt in
+	let rule = { 
+	  name = Option.map_default (name_gen ()) fst name_wp_opt ;
+	  lhs  = SiteGraph.create sign ;
+	  rhs  = tr_site_graph sign mixt } in
+	Some { max_instances = Unlimited ; init_rule = rule }
+  | INIT_TOK _ -> None
 	
 	
 let tr_init sign ast = 
-	
-	let name_gen = 
-		let get_fresh = Util.new_counter 1 in
-		fun () -> sprintf "init_%d" (get_fresh ()) in
-		
-	Util.map_and_filter (tr_init_decl name_gen sign) ast.init
+  let name_gen = 
+	let get_fresh = Util.new_counter 1 in
+	fun () -> sprintf "init_%d" (get_fresh ()) in
+  Util.map_and_filter (tr_init_decl name_gen sign) ast.init
 		
 
 
-let tr_model ast = 
-	let sign = tr_signature ast.signatures in
+let add_init_rules (m : model) = 
+  {m with rules = (List.map (fun i -> i.init_rule) m.init) @ m.rules}
 
-	{ signature   = sign ;
-	  observables = tr_observables sign ast ;
-	  init        = tr_init sign ast ;
-	  rules       = tr_rules sign ast ;
-	}
+let add_obs_rules (m : model) = 
+  let add_obs name sg (m : model) = 
+    let rule = {
+      name = name ;
+      lhs = sg ;
+      rhs = sg ;
+    } in
+    {m with rules = rule :: m.rules} in
+  Smap.fold add_obs m.observables m
+  
+  
+
+let tr_model ?(init_as_rule=true) ?(obs_as_rule=true) ast = 
+  let sign = tr_signature ast.signatures in
+  { signature   = sign ;
+	observables = tr_observables sign ast ;
+	init        = tr_init sign ast ;
+	rules       = tr_rules sign ast ;
+  }
+  |> (if init_as_rule then add_init_rules else Util.identity)
+  |> (if obs_as_rule  then add_obs_rules  else Util.identity)
 	
 
 let parse_files files = 

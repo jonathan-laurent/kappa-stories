@@ -1,12 +1,13 @@
 %agent: K(d)
 %agent: S(d,x~u~p,y~u~p)
 
-'K.S' K(d),S(d) <-> K(d!1),S(d!1) @ 1,1
-'Sx' K(d!1),S(d!1, x~u) -> K(d!1),S(d!1, x~p) @ 1
-'Sy' K(d!1),S(d!1, y~u) -> K(d!1),S(d!1, y~p) @ 1
-'sw' K(d!1),K(d),S(d!1, x~p, y~u) -> K(d),K(d!1),S(d!1, x~p, y~u)  @ 5
+'b'  K(d),S(d) -> K(d!1),S(d!1) @ 1
+'u'  K(d!1),S(d!1) -> K(d),S(d) @ 1
+'px' K(d!1),S(d!1, x~u) -> K(d!1),S(d!1, x~p) @ 1
+'py' K(d!1),S(d!1, y~u) -> K(d!1),S(d!1, y~p) @ 1
+#'sw' K(d!1),K(d),S(d!1, x~p, y~u) -> K(d),K(d!1),S(d!1, x~p, y~u)  @ 5
 
-%obs: 'Sxy' |S(x~p,y~p)|
+%obs: 'obs' |S(d, x~p,y~p)|
 
 %init: 5 K(), S()
 

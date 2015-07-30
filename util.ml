@@ -7,17 +7,19 @@
 let (|>) x f = f x
 let (|-) f g x = g (f x)
 
+let identity x = x
+
 module Option = struct
 
-let map f = function
+  let map f = function
 	| None -> None 
 	| Some x -> Some (f x)
-	
-let map_default def f = function
+	  
+  let map_default def f = function
 	| None -> def
 	| Some x -> f x
-	
-let default def = function
+	  
+  let default def = function
 	| None -> def
 	| Some x -> x
 
@@ -33,6 +35,37 @@ let rec map_and_filter f = function
 
 
 let sum_list = List.fold_left (+) 0
+
+let rec zip l l' = match l, l' with
+  | [], _ | _, [] -> []
+  | x::xs, y::ys -> (x, y) :: (zip xs ys)
+
+let rec print_list begF sepF endF print_elem fmt l = 
+  begF fmt ;
+  let rec aux = function
+    | [] -> endF fmt ;
+    | x :: [] -> print_elem fmt x ; endF fmt
+    | x :: xs -> 
+      print_elem fmt x ; 
+      sepF fmt ; 
+      aux xs in
+  aux l
+
+let print_list' begC sepC endC print_elem fmt l = 
+  let compile c fmt = Format.fprintf fmt "%s" c in 
+  print_list 
+    (compile begC)
+    (compile sepC)
+    (compile endC)
+    print_elem fmt l
+
+let print_list_newline print_elem fmt l =
+  print_list
+    (fun _ -> ())
+    (fun fmt -> Format.fprintf fmt "@;")
+    (fun fmt -> Format.fprintf fmt "@;")
+
+    print_elem fmt l
 
 let printf  = Format.printf
 let sprintf = Format.sprintf
@@ -114,6 +147,9 @@ module type MAP_SET_S = sig
   val add : key -> elt -> t -> t
   val remove : key -> elt -> t -> t
 
+  val iter : (key -> elt_set -> unit) -> t -> unit
+  val iter_bindings : (key -> elt ->  unit) -> t -> unit
+
 end
 
 module MapSet (Key : Map.OrderedType) (Set : Set.S) : 
@@ -138,6 +174,10 @@ struct
   let add k e t = M.add k (Set.add e (find_all k t)) t
 
   let remove k e t = M.add k (Set.remove e (find_all k t)) t
+
+  let iter f t = M.iter f t
+
+  let iter_bindings f r = M.iter (fun k s -> Set.iter (fun e -> f k e) s) r
 
 end
 
@@ -213,8 +253,8 @@ let min_from_fold fold costF le =
 
   (* [None] is +oo *)
   let le_opt x y = match x, y with
-    | None, None -> true
-    | None, _ | _, None -> false
+    | _, None    -> true
+    | None, _    -> false
     | Some x, Some y -> le x y in
 
   fun t ->
@@ -227,4 +267,10 @@ let min_from_fold fold costF le =
     match snd min_opt with
     | None -> assert false
     | Some x -> x
- 
+
+
+let print_in_file filename printF x = 
+  let c = open_out filename in
+  let fmt = Format.formatter_of_out_channel c in
+  printF fmt x ;
+  close_out c ; 

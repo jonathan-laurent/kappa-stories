@@ -126,6 +126,8 @@ module Agent = struct
 		let new_site = Site.create ag.id site_sign in
 		
 		(site_lens site_id ^= new_site) ag
+
+    let has_site s_id ag = SIdMap.mem s_id ag.sites
 		
 		
 	
