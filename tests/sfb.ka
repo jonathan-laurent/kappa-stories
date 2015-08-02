@@ -3,8 +3,8 @@
 
 # phase -> activated dimers
 # external dimers:
-'EGF_EGFR'  EGF(r), EGFR(L,CR) <-> EGF(r!1), EGFR(L!1,CR)
-'EGFR_EGFR' EGFR(L!_,CR), EGFR(L!_,CR) <-> EGFR(L!_,CR!1), EGFR(L!_,CR!1)
+'EGF_EGFR'  EGF(r), EGFR(L,CR) -> EGF(r!1), EGFR(L!1,CR)
+'EGFR_EGFR' EGFR(L!_,CR), EGFR(L!_,CR) -> EGFR(L!_,CR!1), EGFR(L!_,CR!1)
 # simplified phos (internal or external)
 'EGFR@992'  EGFR(CR!_,Y992~u) -> EGFR(CR!_,Y992~p)
 'EGFR@1068' EGFR(CR!_,Y1068~u) -> EGFR(CR!_,Y1068~p)
@@ -23,10 +23,10 @@
 'EGFR_EGFR_op' EGFR(L!_,CR!1), EGFR(L!_,CR!1) -> EGFR(L!_,CR), EGFR(L!_,CR)
 'EGF_EGFR_op'  EGF(r!1), EGFR(L!1,CR) -> EGF(r), EGFR(L,CR)
 # degradation:
-'deg_EGF'      EGF(r) -> 
-'deg_EGFR'     EGFR(L,CR) -> 
+#'deg_EGF'      EGF(r) -> 
+#'deg_EGFR'     EGFR(L,CR) -> 
 # recycling:
-'rec_EGFR'     EGFR(L,Y992~u,Y1068~u,Y1148~u) -> EGFR(L,Y992~u,Y1068~u,Y1148~u)
+#'rec_EGFR'     EGFR(L,Y992~u,Y1068~u,Y1148~u) -> EGFR(L,Y992~u,Y1068~u,Y1148~u)
 
 # phase -> SoS and RasGAP recruitment
 'EGFR_RasGAP'  EGFR(Y992~p), RasGAP(SH2) <-> EGFR(Y992~p!1), RasGAP(SH2!1) 
@@ -102,23 +102,19 @@
 'SoS@SS_op'  SoS(SS~p) -> SoS(SS~u) # rates here...
 
 # initial solution (much smaller, for basic testing)
-%init: 10*(EGF(r)) 
-%init: 100*(EGFR(L,CR,Y992~u,Y1068~u,Y1148~u))
-%init: 100*(Shc(PTB,Y318~u)) 
-%init: 100*(Grb2(SH2,SH3!1),SoS(a!1,b,SS~u)) 
-%init: 200*(RasGAP(SH2,s)) 
-%init: 100*(Ras(S1S2~gdp)) 
-%init: 100*(Raf(x~u)) 
-%init: 40*(PP2A1(s)) 
-%init: 50*(PP2A2(s)) 
-%init: 200*(MEK(s,S222~u,S218~u))
-%init: 200*(ERK(s,T185~u,Y187~u))
-%init: 50*(MKP3(s))
+%init: 10  (EGF(r)) 
+%init: 100 (EGFR(L,CR,Y992~u,Y1068~u,Y1148~u))
+%init: 100 (Shc(PTB,Y318~u)) 
+%init: 100 (Grb2(SH2,SH3!1),SoS(a!1,b,SS~u)) 
+%init: 200 (RasGAP(SH2,s)) 
+%init: 100 (Ras(S1S2~gdp)) 
+%init: 100 (Raf(x~u)) 
+%init: 40  (PP2A1(s)) 
+%init: 50  (PP2A2(s)) 
+%init: 200 (ERK(s,T185~u,Y187~u))
+%init: 200 (MEK(s,S222~u,S218~u))
+%init: 50  (MKP3(s))
 
-#%obs: EGFR(Y992~p?,Y1068~p?,Y1148~p?)
-%obs: Ras(S1S2~gtp?)
-%obs: Raf(x~p?)
-%obs: MEK(S218~p?,S222~p?)
-%obs: ERK(T185~p?,Y187~p?)
+#%obs: 'SoS_ERK obs' |SoS(SS~u!1), ERK(s!1,T185~p,Y187~p)|
 #%story: 'Ras GTP'
-%story: 'SoS_ERK'
+#%story: 'SoS_ERK'

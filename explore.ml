@@ -20,11 +20,11 @@ module Make (S : AgentBased.System) = struct
      Caught by [BranchAndCut] *)
   exception Bottom
 
-  (* To raise when the observable is unreachable and so there is no story *)
-  exception Unreachable
+  (* To raise when the exploration has to stop
+     because the observable is unreachable or the enough stories were generated *)
+  exception Terminated
 
   exception Great
-
 
   (** Creating and manipulating environments *)
 
@@ -34,11 +34,12 @@ module Make (S : AgentBased.System) = struct
   type traits_dict = trait_type -> source_ty list
 
   type environment = {
-    rules       : rule int_map ;
-    tdict       : traits_dict ;
-    stories     : story list ;
-    size_limit  : int ;
-    next_id     : int ;
+    rules         : rule int_map ;
+    tdict         : traits_dict ;
+    stories       : story list ;
+    size_limit    : int ;
+    stories_limit : int ;
+    next_id       : int ;
   }
 
  let compile_traits (rs : rule list) : traits_dict = 
@@ -55,11 +56,12 @@ module Make (S : AgentBased.System) = struct
     id, { env with next_id = id + 1 }
 
 
-  let environment ?(size_limit=20) rules  = {
+  let environment ~size_limit ~stories_limit rules  = {
     rules = Imap.of_list (List.map (fun r -> (rule_id r, r)) rules) ;
     tdict = compile_traits rules ;
     stories = [] ;
     size_limit = size_limit ;
+    stories_limit = stories_limit ;
     next_id = 0 ;
   }
 
@@ -116,8 +118,9 @@ module Make (S : AgentBased.System) = struct
 
 
 
-  let initial_pstory env id rule_id = 
+  let initial_pstory env rule_id = 
 
+    let id, env = generate_id env in
     let ps = 
       { id = id ;
         cost = Cost.default ;
@@ -126,9 +129,7 @@ module Make (S : AgentBased.System) = struct
         rules_instances = ISetImap.empty ;
         next_node_id = 0 }  in
 
-    snd (add_node (init_node env rule_id) ps)
-
-
+    snd (add_node (init_node env rule_id) ps), env
 
 
 
@@ -199,13 +200,16 @@ module Make (S : AgentBased.System) = struct
       ( let nodes = nodes_of_arrows ps arrows in 
         is_time_consistent ps nodes arrows )
 
-  (* Performs a quick logarithmic time consistency check.  Agent
-     coherence is tested globally.  Time coherence is tested for :
+  (* Performs a quick logarithmic time consistency check.
+     Time coherence is tested for :
      Nodes : successors of [src] and predecessors of [dest] Arrows :
      outgoing from [src] and incoming to [dest] *)
   let is_locally_consistent ps src_id dest_id =
-    let src = ps |. node src_id and dest = ps |. node dest_id in
-    is_consistent ps (outgoing_arrows_list src @ incoming_arrows_list dest)
+    AgEqv.quick_check ps.agent_eqv &&
+      ( let src = ps |. node src_id and dest = ps |. node dest_id in
+        let arrows = outgoing_arrows_list src @ incoming_arrows_list dest in
+        let nodes = nodes_of_arrows ps arrows in
+        is_time_consistent ps nodes arrows )
       
   (* A full blown consistency check. *)
   let is_globally_consistent ps = 
@@ -452,6 +456,7 @@ module Make (S : AgentBased.System) = struct
     let filename = sprintf "out/%d.dot" n in
     print_in_file filename Story.dump_dot story ;
     print_endline (sprintf "Generated : %s." filename) ;
+    if n >= env.stories_limit then raise Terminated ;
     env
 
 end

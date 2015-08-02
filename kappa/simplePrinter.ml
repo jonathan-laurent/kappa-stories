@@ -35,6 +35,6 @@ let print_sgraph f s =
 
 module SiteGraph = struct
 
-	let fprintf f sg = print_sgraph f (SimpleAst.dump sg)
+	let fprintf fmt sg = print_sgraph fmt (SimpleAst.dump sg)
 
 end

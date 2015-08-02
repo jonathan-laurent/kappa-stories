@@ -47,6 +47,13 @@ module type S = sig
       See [mark] and [unmergeable]. *)
   val is_bottom : t -> bool
 
+
+  (** A quick consistency check. 
+      If [quick_check t = false], then [is_bottom t = true] but
+      the converse is not true. *)
+  val quick_check : t -> bool
+
+
   val dump : Format.formatter -> t -> unit
 
 end

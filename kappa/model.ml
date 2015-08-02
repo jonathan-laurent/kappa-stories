@@ -25,21 +25,23 @@ and init_max_instances =
 
 and rule = {
   name : string ;
-  lhs : site_graph ;
-  rhs : site_graph ;
+  refn : int ;         (* Refinment number *)
+  lhs  : site_graph ;
+  rhs  : site_graph ;
 }
 
-(* Rule compilation process *)
 
-type action = 
-| CreateAgent of (agent_ty * agent_id)
-| RemoveAgent of (agent_id)
-| Bind        of (port_id * port_id)
-| Mod         of (port_id * site_int_state)
-| Break       of (link)
-| BreakSemi   of (port_id)
+let dump fmt m = 
 
-let create_default_agent (s : Signature.t) = failwith ""
+  let pr msg = Format.fprintf fmt msg in
+  let print_rule r =
+	let printer = SimplePrinter.SiteGraph.fprintf in
+	pr "'%s' " r.name ;
+	pr "%a -> %a@;" printer r.lhs printer r.rhs in
+	
+  pr "@[<v>" ;
+  List.iter print_rule m.rules  ;
+  pr "@]@."
 
 	
 	

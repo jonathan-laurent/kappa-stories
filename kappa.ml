@@ -244,6 +244,27 @@ let print_trait r fmt =
 
 
 
+let compile_model (m : Model.model) : (rule list) * (rule_id list) = 
+  let genid = new_counter 0 in
+  let id_of_name = Hashtbl.create 100 in
+  let compile_rule r = 
+    let id = genid () in
+    Hashtbl.add id_of_name r.Model.name id ;
+    compile m.Model.signature id r in
+
+  let rules = List.map compile_rule m.Model.rules in
+
+  let obs_names = 
+    m.Model.observables |> Smap.bindings |> List.map fst in
+
+  let obs = 
+    rules
+    |> List.filter (fun r -> List.mem r.name obs_names)
+    |> List.map (fun r -> Hashtbl.find id_of_name r.name) in
+
+  rules, obs
+
+
 (* Printing utilities *)
 
 let print sign fmt r =

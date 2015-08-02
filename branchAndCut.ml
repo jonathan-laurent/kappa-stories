@@ -62,7 +62,7 @@ struct
           
     with Leftistheap.Empty -> env
 
-  let run env s = 
-    visit env (Spq.insert s (Spq.empty))
+  let run env s_list = 
+    visit env (List.fold_right Spq.insert s_list (Spq.empty))
 
 end

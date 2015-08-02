@@ -112,9 +112,9 @@
 
 'uY@Shc' Shc(Y~p) -> Shc(Y~u) @ 'k_cat'
 
-#%obs: 'EOI' Grb2(SH2!_,SH3n!2),SoS(PR!2)
+%obs: 'EOI' Grb2(SH2!_,SH3n!2),SoS(PR!2)
 #%obs: 'EOI' Grb2(SH2!1,SH3n!2),SoS(PR!2),Shc(Y~p!1)
-%obs: 'EOI' Grb2(SH2!1,SH3n!2),SoS(PR!2),EGFR(Y1092~p!1)
+#%obs: 'EOI' Grb2(SH2!1,SH3n!2),SoS(PR!2),EGFR(Y1092~p!1)
 
 
 

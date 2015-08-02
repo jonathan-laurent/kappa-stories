@@ -128,35 +128,48 @@ let rec longest_common_prefix eq = function
 
 
 
+
+let flip_rule r = {
+  name = r.name ^ "_op" ;
+  lhs = r.rhs ;
+  rhs = r.lhs ;
+  refn = r.refn
+}
+
 let tr_rule sign (rule_name_wp_opt, rule_wp) =
 
-	let rule = fst rule_wp in 
+  let rule = fst rule_wp in 
 
-	let are_compatible (nm_wp, sites) (nm_wp', sites') = 
-		let site_name p = fst (p.port_nme) in
-		(fst nm_wp) = (fst nm_wp')
-		&& (List.map site_name sites) = (List.map site_name sites') in
-	
-	let (p_lhs, t_lhs), (p_rhs, t_rhs) = 
-		longest_common_prefix are_compatible (rule.lhs, rule.rhs) in
-		
-	let label_agents labf ags = List.map (fun ag -> (ag, Some (labf ()))) ags in
-	
-	let counter = Util.new_counter 1 in
-	let lhs = label_agents counter (p_lhs @ t_lhs) in
-	let rhs = label_agents (Util.new_counter 1) p_rhs
-			@ label_agents counter t_rhs in
-			
-	{ lhs = tr_site_graph sign lhs ;
+  let are_compatible (nm_wp, sites) (nm_wp', sites') = 
+	let site_name p = fst (p.port_nme) in
+	(fst nm_wp) = (fst nm_wp')
+	&& (List.map site_name sites) = (List.map site_name sites') in
+  
+  let (p_lhs, t_lhs), (p_rhs, t_rhs) = 
+	longest_common_prefix are_compatible (rule.lhs, rule.rhs) in
+  
+  let label_agents labf ags = List.map (fun ag -> (ag, Some (labf ()))) ags in
+  
+  let counter = Util.new_counter 1 in
+  let lhs = label_agents counter (p_lhs @ t_lhs) in
+  let rhs = label_agents (Util.new_counter 1) p_rhs
+	@ label_agents counter t_rhs in
+
+  let compiled_rule =  
+    { lhs = tr_site_graph sign lhs ;
 	  rhs = tr_site_graph sign rhs ;
-	  name = match rule_name_wp_opt with
-	  	| None -> "Please give a name to ALL your rules, dude..."
-	  	| Some n_wp -> fst n_wp
-	}
+	  name = 
+        ( match rule_name_wp_opt with
+	    | None -> "Please give a name to ALL your rules, dude..."
+	    | Some n_wp -> fst n_wp ) ;
+      refn = 0
+    } in
+  match rule.Ast.arrow with
+  | Ast.RAR -> [compiled_rule]
+  | Ast.LRAR -> [compiled_rule ; flip_rule compiled_rule]
 
 
-
-let tr_rules sign ast = List.map (tr_rule sign) ast.rules
+let tr_rules sign ast = List.concat (List.map (tr_rule sign) ast.rules)
 
 
 
@@ -183,7 +196,9 @@ let tr_init_decl name_gen sign (name_wp_opt, init_t , _) = match init_t with
 	let rule = { 
 	  name = Option.map_default (name_gen ()) fst name_wp_opt ;
 	  lhs  = SiteGraph.create sign ;
-	  rhs  = tr_site_graph sign mixt } in
+	  rhs  = tr_site_graph sign mixt ;
+      refn = 0
+    } in
 	Some { max_instances = Unlimited ; init_rule = rule }
   | INIT_TOK _ -> None
 	
@@ -205,6 +220,7 @@ let add_obs_rules (m : model) =
       name = name ;
       lhs = sg ;
       rhs = sg ;
+      refn = 0 ;
     } in
     {m with rules = rule :: m.rules} in
   Smap.fold add_obs m.observables m

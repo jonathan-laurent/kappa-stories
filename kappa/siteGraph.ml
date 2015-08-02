@@ -209,6 +209,9 @@ let fold_ports f sg init =
 	let process_agent ag acc = Agent.fold f ag acc in
 	fold_agents process_agent sg init
 
+let iter_ports f sg = 
+  fold_ports (fun s _ -> f s) sg ()
+
 
 (* WARNING : Border effect *)
 
@@ -274,6 +277,6 @@ let add_link lnk sg =
 	
 let bind p p' sg = add_link (Link.make p p') sg
 
-
-
-
+let port_ty (ag_id, site_id) sg =
+  let ag_ty = sg |. agent ag_id |> Agent.signature |> Signature.Agent.ty in
+  (ag_ty, site_id)

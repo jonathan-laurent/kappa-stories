@@ -10,6 +10,7 @@ module type PARAMS = sig
   val exn_on_bottom : bool
 end
 
+
 (** This exception is sent as soon a structure becomes inconsistent *)
 exception Bottom
 
@@ -45,6 +46,8 @@ module type S = sig
   (** Checks if the structure is inconsistent. 
       See [mark] and [unmergeable]. *)
   val is_bottom : t -> bool
+
+  val quick_check : t -> bool
 
   val dump : Format.formatter -> t -> unit
 
@@ -153,6 +156,8 @@ module Make (E : ELEM) (P : PARAMS) = struct
 			| false, [] -> false
 		  in bottom_class false representants
 	    end
+
+    let quick_check h = not (h.mark_error)
 
     let dump fmt t =
       let pr msg = Format.fprintf fmt msg in

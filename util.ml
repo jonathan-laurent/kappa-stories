@@ -106,6 +106,8 @@ module type EXT_MAP_S = sig
 	
   val mem_binding : (key * 'a) -> 'a t -> bool
 
+  val update : key -> ('a -> 'a) -> 'a t -> 'a t
+
 end
 
 module ExtMap (X : Map.OrderedType) : 
@@ -130,6 +132,8 @@ struct
 		
 	let mem_binding (k, v) t = 
 		try find k t = v with Not_found -> false
+
+    let update k f m = add k (f (find k m)) m
 
 end
 

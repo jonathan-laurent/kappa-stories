@@ -122,6 +122,8 @@ val fold_agents : (agent -> 'acc -> 'acc) -> t -> 'acc -> 'acc
 
 val fold_ports : (site -> 'acc -> 'acc) -> t -> 'acc -> 'acc
 
+val iter_ports : (site -> unit) -> t -> unit
+
 val add_agent : ?id:agent_id -> agent_ty -> t -> (t * agent_id)
 	(** Adds an agent in the site graph. It is possible to specify
 		manually its identifier by providing the [?id] argument. If it
@@ -150,8 +152,7 @@ val unbind : port_id -> port_id -> t -> t
 
 val unbind_semi : port_id -> t -> t 
 	
-
-
+val port_ty : port_id -> t -> port_ty
 
 
 
